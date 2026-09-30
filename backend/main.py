@@ -12,7 +12,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import sys
 from pathlib import Path
+
+# Windows subprocess support (spawning `claude.cmd`) requires the Proactor
+# event loop. uvicorn's CLI defaults to SelectorEventLoop on Windows, which
+# raises NotImplementedError on create_subprocess_exec.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -93,3 +100,8 @@ async def ws(websocket: WebSocket):
 
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8765, reload=False)
