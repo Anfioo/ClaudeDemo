@@ -1,0 +1,8 @@
+INFO:     Started server process [47596]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8766 (Press CTRL+C to quit)
+INFO:     127.0.0.1:9659 - "WebSocket /ws" [accepted]
+INFO:     connection open
+2026-09-30 10:59:04,664 INFO claude stderr: [claude-code:unrecognized_model] {"model":"deepseek-v4-pro[1m]","query_source":"sdk"}
+2026-09-30 10:59:07,084 INFO ws disconnected

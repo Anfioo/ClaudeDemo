@@ -44,6 +44,8 @@ class ClaudeSession:
     # set after spawn
     _proc: asyncio.subprocess.Process | None = field(default=False, init=False, repr=False)  # type: ignore[assignment]
     _blocks: dict[int, _BlockState] = field(default_factory=dict, init=False)
+    _saw_stream: bool = field(default=False, init=False)
+    _system_sent: bool = field(default=False, init=False)
     _event_queue: asyncio.Queue[dict[str, Any] | None] = field(
         default_factory=lambda: asyncio.Queue(maxsize=10000), init=False
     )
@@ -170,12 +172,16 @@ class ClaudeSession:
     def _handle_message(self, msg: dict[str, Any]) -> None:
         t = msg.get("type")
         if t == "system":
-            self._emit(
-                type="system_init",
-                model=msg.get("model"),
-                session_id=msg.get("session_id"),
-                cwd=msg.get("cwd"),
-            )
+            # The CLI emits multiple `system` lines (init, periodic updates);
+            # only surface the first one to the frontend.
+            if not self._system_sent:
+                self._system_sent = True
+                self._emit(
+                    type="system_init",
+                    model=msg.get("model"),
+                    session_id=msg.get("session_id"),
+                    cwd=msg.get("cwd"),
+                )
             return
 
         if t == "result":
@@ -185,14 +191,19 @@ class ClaudeSession:
                 usage=msg.get("usage"),
                 duration_ms=msg.get("duration_ms") or msg.get("durationMs"),
             )
+            self._saw_stream = False
             return
 
         if t == "stream_event":
+            self._saw_stream = True
             self._handle_stream_event(msg.get("event") or {})
             return
 
         if t == "assistant":
-            # Non-streaming fallback: emit each content block as a complete block.
+            # If we already streamed this turn via stream_event, the final
+            # assistant message is just a duplicate — skip it.
+            if self._saw_stream:
+                return
             content = (msg.get("message") or {}).get("content") or []
             if isinstance(content, str):
                 content = [{"type": "text", "text": content}]
