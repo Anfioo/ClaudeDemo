@@ -77,8 +77,6 @@ class ClaudeSession:
         else:
             args = [exe, *base_args]
 
-        self._emit(type="log", message=f"spawning: {' '.join(args)}")
-
         proc = await asyncio.create_subprocess_exec(
             *args,
             stdin=asyncio.subprocess.PIPE,
@@ -88,6 +86,7 @@ class ClaudeSession:
         )
         sess = cls(cwd=cwd, model=model)
         sess._proc = proc
+        sess._emit(type="log", message=f"spawning: {' '.join(args)}")
         asyncio.create_task(sess._pump_stdout())
         asyncio.create_task(sess._pump_stderr())
         return sess
