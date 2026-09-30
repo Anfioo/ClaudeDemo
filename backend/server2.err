@@ -6,3 +6,7 @@ INFO:     127.0.0.1:9659 - "WebSocket /ws" [accepted]
 INFO:     connection open
 2026-09-30 10:59:04,664 INFO claude stderr: [claude-code:unrecognized_model] {"model":"deepseek-v4-pro[1m]","query_source":"sdk"}
 2026-09-30 10:59:07,084 INFO ws disconnected
+INFO:     127.0.0.1:9174 - "WebSocket /ws" [accepted]
+INFO:     connection open
+2026-09-30 10:59:18,208 INFO claude stderr: [claude-code:unrecognized_model] {"model":"deepseek-v4-pro[1m]","query_source":"sdk"}
+2026-09-30 10:59:20,876 INFO ws disconnected
