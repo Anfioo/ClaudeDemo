@@ -52,6 +52,7 @@ class ClaudeSession:
 
     @classmethod
     async def create(cls, cwd: str = ".", model: str | None = None) -> "ClaudeSession":
+        import sys
         exe = shutil.which("claude")
         if not exe:
             raise ClaudeSessionError(
@@ -59,8 +60,7 @@ class ClaudeSession:
                 "https://docs.claude.com/en/docs/claude-code/quickstart"
             )
 
-        args = [
-            exe,
+        base_args = [
             "--output-format", "stream-json",
             "--input-format", "stream-json",
             "--include-partial-messages",
@@ -68,7 +68,16 @@ class ClaudeSession:
             "--dangerously-skip-permissions",
         ]
         if model:
-            args += ["--model", model]
+            base_args += ["--model", model]
+
+        # On Windows, Node-installed CLIs are `claude.cmd` shims. CreateProcess
+        # cannot run .cmd/.bat directly — wrap with `cmd.exe /c`.
+        if sys.platform == "win32" and exe.lower().endswith((".cmd", ".bat")):
+            args = ["cmd.exe", "/c", exe, *base_args]
+        else:
+            args = [exe, *base_args]
+
+        self._emit(type="log", message=f"spawning: {' '.join(args)}")
 
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -134,9 +143,16 @@ class ClaudeSession:
                 try:
                     msg = json.loads(line)
                 except json.JSONDecodeError:
+                    # Non-JSON stdout line — surface it as a log so the user sees it.
+                    self._emit(type="log", message="stdout: " + line.decode(errors="replace").rstrip())
                     continue
                 self._handle_message(msg)
         finally:
+            try:
+                rc = await self._proc.wait()
+            except Exception:
+                rc = -1
+            self._emit(type="exit", code=rc)
             self._emit(type="closed")
             await self._event_queue.put(None)
 
@@ -146,7 +162,9 @@ class ClaudeSession:
             line = await self._proc.stderr.readline()
             if not line:
                 break
-            logger.debug("claude stderr: %s", line.decode(errors="replace").rstrip())
+            text = line.decode(errors="replace").rstrip()
+            logger.info("claude stderr: %s", text)
+            self._emit(type="log", message="stderr: " + text)
 
     # ---------------------------------------------------------- message router
 

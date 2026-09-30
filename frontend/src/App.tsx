@@ -125,6 +125,16 @@ export default function App() {
         setMessages((m) => [...m, { id: nextId++, role: 'assistant', text: '⚠ ' + data.message, error: true }])
         setStatus('idle')
         break
+      case 'log':
+        setMessages((m) => [...m, { id: nextId++, role: 'assistant', text: '» ' + data.message, error: false }])
+        break
+      case 'exit':
+        setMessages((m) => [
+          ...m,
+          { id: nextId++, role: 'assistant', text: `· claude process exited (code ${data.code})`, error: data.code !== 0 },
+        ])
+        setStatus('idle')
+        break
       case 'closed':
         setStatus('idle')
         break
